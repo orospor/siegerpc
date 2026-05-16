@@ -22,8 +22,20 @@ Defaults are intentionally modest:
 
 ## Quick start
 
+Install from GitHub:
+
 ```bash
-python3 -m siegerpc --url https://example.com/xmlrpc.php --i-own-this-server
+curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/install.sh | bash
+```
+
+If your Python environment needs a user-level install:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/install.sh | bash -s -- --user
+```
+
+```bash
+siegerpc --url https://example.com/xmlrpc.php --i-own-this-server
 ```
 
 Run from this project directory:
@@ -84,4 +96,3 @@ python3 -m siegerpc \
 
 For defensive testing, watch your web server CPU, PHP-FPM workers, database load,
 WAF logs, and WordPress access logs while running this tool.
-
