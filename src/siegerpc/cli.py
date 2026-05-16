@@ -231,6 +231,34 @@ def write_csv(path: str, results: Iterable[Result]) -> None:
             writer.writerow([item.ok, item.status, f"{item.elapsed_ms:.3f}", item.bytes_read, item.error or ""])
 
 
+def drain_results(results_queue: queue.Queue[Result], results: list[Result]) -> int:
+    drained = 0
+    while True:
+        try:
+            results.append(results_queue.get_nowait())
+            drained += 1
+        except queue.Empty:
+            return drained
+
+
+def progress_line(results: list[Result], started: float, previous_total: int, interval: float) -> str:
+    elapsed = max(time.perf_counter() - started, 0.001)
+    total = len(results)
+    successes = sum(1 for item in results if item.ok)
+    failures = total - successes
+    current_rate = (total - previous_total) / max(interval, 0.001)
+    average_rate = total / elapsed
+    availability = (successes / total * 100) if total else 0
+    recent = results[-100:]
+    recent_latencies = [item.elapsed_ms for item in recent]
+    recent_p95 = percentile(recent_latencies, 95) if recent_latencies else 0
+    return (
+        f"progress: {total} requests | ok {successes} | fail {failures} | "
+        f"availability {availability:.2f}% | current {current_rate:.2f} req/s | "
+        f"avg {average_rate:.2f} req/s | recent p95 {recent_p95:.2f} ms"
+    )
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="siegerpc",
@@ -243,6 +271,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--concurrency", type=int, default=10, help="Number of worker threads")
     parser.add_argument("--rate", type=float, default=50, help="Global request rate limit. Use 0 for unlimited")
     parser.add_argument("--timeout", type=float, default=30, help="Per-request timeout in seconds")
+    parser.add_argument("--progress-interval", type=float, default=1, help="Seconds between live progress updates")
     parser.add_argument("--csv", help="Optional CSV output path for per-request results")
     parser.add_argument("--user-agent", default="siegerpc/0.1 authorized-load-test", help="Base User-Agent header")
     parser.add_argument("--insecure-tls", action="store_true", help="Disable TLS certificate verification")
@@ -263,6 +292,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         parser.error("--requests must be positive")
     if args.rate is not None and args.rate < 0:
         parser.error("--rate cannot be negative")
+    if args.progress_interval <= 0:
+        parser.error("--progress-interval must be positive")
     parsed = urlparse(args.url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         parser.error("--url must be a valid http:// or https:// URL")
@@ -294,7 +325,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"duration:            {args.duration:g}s" if args.duration else "duration:            request-count limited")
     if args.requests:
         print(f"request limit:       {args.requests}")
-    print("press Ctrl+C to stop early")
+    print("press Ctrl+C to stop early", flush=True)
 
     started = time.perf_counter()
     for index in range(args.concurrency):
@@ -306,13 +337,24 @@ def main(argv: list[str] | None = None) -> int:
         thread.start()
         threads.append(thread)
 
+    results: list[Result] = []
+    previous_total = 0
+    next_progress = time.perf_counter() + args.progress_interval
+    while any(thread.is_alive() for thread in threads):
+        time.sleep(min(0.1, args.progress_interval))
+        drain_results(results_queue, results)
+        now = time.perf_counter()
+        if now >= next_progress:
+            print(progress_line(results, started, previous_total, args.progress_interval), flush=True)
+            previous_total = len(results)
+            next_progress = now + args.progress_interval
+
     for thread in threads:
         thread.join()
 
     elapsed = time.perf_counter() - started
-    results: list[Result] = []
-    while not results_queue.empty():
-        results.append(results_queue.get())
+    drain_results(results_queue, results)
+    print(progress_line(results, started, previous_total, max(time.perf_counter() - next_progress + args.progress_interval, 0.001)), flush=True)
 
     if args.csv:
         write_csv(args.csv, results)
@@ -320,4 +362,3 @@ def main(argv: list[str] | None = None) -> int:
 
     print(summarize(results, elapsed))
     return 0 if results and any(item.ok for item in results) else 1
-
