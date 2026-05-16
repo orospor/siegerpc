@@ -14,7 +14,7 @@ Install siegerpc from GitHub.
 
 Options:
   --user              Install into the current user's Python site packages
-  --system            Install into the active Python environment
+  --system            Install globally into the active Python environment
   --venv DIR          Create/use a virtual environment at DIR
   -h, --help          Show this help
 
@@ -23,6 +23,7 @@ Environment:
 
 Examples:
   curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/install.sh | sudo bash -s -- --system
   curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/install.sh | bash -s -- --user
   curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/install.sh | bash -s -- --venv "$HOME/.local/share/siegerpc"
 EOF
@@ -99,11 +100,17 @@ else
   PIP_ARGS=""
   if [ "$INSTALL_MODE" = "user" ]; then
     PIP_ARGS="--user"
+  elif [ "$INSTALL_MODE" = "system" ]; then
+    if "$PYTHON_BIN" -m pip install --help 2>/dev/null | grep -q -- "--break-system-packages"; then
+      PIP_ARGS="--break-system-packages"
+    fi
   fi
 fi
 
 "$PYTHON_BIN" -m ensurepip --upgrade >/dev/null 2>&1 || true
-"$PYTHON_BIN" -m pip install --upgrade pip >/dev/null
+if [ "$INSTALL_MODE" = "venv" ]; then
+  "$PYTHON_BIN" -m pip install --upgrade pip >/dev/null
+fi
 
 if [ -n "$PIP_ARGS" ]; then
   "$PYTHON_BIN" -m pip install --force-reinstall $PIP_ARGS "$REPO_URL"

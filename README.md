@@ -28,6 +28,12 @@ Install from GitHub:
 curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/install.sh | bash
 ```
 
+Global system install on Debian/Ubuntu:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/install.sh | sudo bash -s -- --system
+```
+
 If your Python environment needs a user-level install:
 
 ```bash
