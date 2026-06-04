@@ -101,8 +101,9 @@ else
   if [ "$INSTALL_MODE" = "user" ]; then
     PIP_ARGS="--user"
   elif [ "$INSTALL_MODE" = "system" ]; then
+    PIP_ARGS="--ignore-installed"
     if "$PYTHON_BIN" -m pip install --help 2>/dev/null | grep -q -- "--break-system-packages"; then
-      PIP_ARGS="--break-system-packages"
+      PIP_ARGS="$PIP_ARGS --break-system-packages"
     fi
   fi
 fi
