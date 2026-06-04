@@ -1,12 +1,16 @@
 # siegerpc
 
-Authorized WordPress `xmlrpc.php` load tester for simulating XML-RPC pressure
-against servers you own or have explicit permission to test.
+Authorized WordPress load testing tools for servers you own or have explicit
+permission to test.
 
 `siegerpc` sends XML-RPC POST requests and reports throughput, status codes,
 latency percentiles, errors, and bytes received. By default it uses the harmless
 `system.listMethods` XML-RPC method, which exercises the XML-RPC endpoint
 without requiring credentials or changing WordPress state.
+
+`siegemax` sends Contact Form 7 multipart upload requests with a configurable
+file payload and form fields. It is useful for checking upload limits, WAF rules,
+PHP worker saturation, and origin behavior under authorized multipart pressure.
 
 ## Safety model
 
@@ -19,6 +23,14 @@ Defaults are intentionally modest:
 - 30 second duration
 - 50 requests per second maximum
 - 30 second request timeout
+
+`siegemax` defaults are stricter because upload requests are heavier:
+
+- 1 concurrent worker
+- 30 second duration
+- 1 request per second maximum
+- 7 MB generated upload file when `--file` is omitted
+- 25 MB upload safety ceiling unless `--allow-large-file` is supplied
 
 ## Quick start
 
@@ -44,6 +56,16 @@ curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/install.sh | 
 siegerpc --url https://example.com/xmlrpc.php --i-own-this-server
 ```
 
+Contact Form 7 upload test:
+
+```bash
+siegemax \
+  --url https://example.com/wp-json/contact-form-7/v1/contact-forms/50/feedback \
+  --form-id 50 \
+  --unit-tag wpcf7-f50-p30-o1 \
+  --i-own-this-server
+```
+
 Run from this project directory:
 
 ```bash
@@ -52,6 +74,8 @@ python3 -m siegerpc --url https://example.com/xmlrpc.php --i-own-this-server
 ```
 
 ## Examples
+
+### siegerpc
 
 Moderate test for one minute:
 
@@ -90,6 +114,45 @@ Save CSV results:
 python3 -m siegerpc \
   --url https://example.com/xmlrpc.php \
   --csv results.csv \
+  --i-own-this-server
+```
+
+### siegemax
+
+Upload an existing 7 MB file to Contact Form 7:
+
+```bash
+siegemax \
+  --url https://example.com/wp-json/contact-form-7/v1/contact-forms/50/feedback \
+  --file /tmp/test7mb.txt \
+  --form-id 50 \
+  --cf7-version 6.1.6 \
+  --unit-tag wpcf7-f50-p30-o1 \
+  --duration 60 \
+  --rate 1 \
+  --i-own-this-server
+```
+
+Increase pressure carefully:
+
+```bash
+siegemax \
+  --url https://example.com/wp-json/contact-form-7/v1/contact-forms/50/feedback \
+  --file /tmp/test7mb.txt \
+  --concurrency 3 \
+  --rate 3 \
+  --duration 120 \
+  --timeout 120 \
+  --i-own-this-server
+```
+
+Override or add form fields:
+
+```bash
+siegemax \
+  --url https://example.com/wp-json/contact-form-7/v1/contact-forms/50/feedback \
+  --field your-email=loadtest@example.com \
+  --field custom-field=value \
   --i-own-this-server
 ```
 
