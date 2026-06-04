@@ -29,7 +29,7 @@ Defaults are intentionally modest:
 - 1 concurrent worker
 - 30 second duration
 - 1 request per second maximum
-- 7 MB generated upload file when `--file` is omitted
+- 7 MB generated upload file when `--file` and `--file-size-mb` are omitted
 - 25 MB upload safety ceiling unless `--allow-large-file` is supplied
 
 ## Quick start
@@ -61,6 +61,7 @@ Contact Form 7 upload test:
 ```bash
 siegemax \
   --url https://example.com/wp-json/contact-form-7/v1/contact-forms/50/feedback \
+  --file-size-mb 7 \
   --form-id 50 \
   --unit-tag wpcf7-f50-p30-o1 \
   --i-own-this-server
@@ -127,6 +128,19 @@ siegemax \
   --file /tmp/test7mb.txt \
   --form-id 50 \
   --cf7-version 6.1.6 \
+  --unit-tag wpcf7-f50-p30-o1 \
+  --duration 60 \
+  --rate 1 \
+  --i-own-this-server
+```
+
+Auto-generate a 10 MB file instead of providing one:
+
+```bash
+siegemax \
+  --url https://example.com/wp-json/contact-form-7/v1/contact-forms/50/feedback \
+  --file-size-mb 10 \
+  --form-id 50 \
   --unit-tag wpcf7-f50-p30-o1 \
   --duration 60 \
   --rate 1 \

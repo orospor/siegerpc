@@ -44,6 +44,16 @@ def parse_size(value: str) -> int:
     return int(size * multiplier)
 
 
+def parse_mb(value: str) -> float:
+    try:
+        size = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"invalid MB value: {value}") from exc
+    if size <= 0:
+        raise argparse.ArgumentTypeError("MB value must be positive")
+    return size
+
+
 def generate_payload_file(size_bytes: int) -> Path:
     handle = tempfile.NamedTemporaryFile(prefix="siegemax-", suffix=".bin", delete=False)
     path = Path(handle.name)
@@ -72,7 +82,8 @@ def build_form_config(args: argparse.Namespace) -> tuple[FormConfig, bool]:
     if args.file:
         file_path = Path(args.file).expanduser()
     else:
-        file_path = generate_payload_file(args.generate_size)
+        generate_size = int(args.file_size_mb * 1024 * 1024) if args.file_size_mb else args.generate_size
+        file_path = generate_payload_file(generate_size)
         generated = True
 
     if not file_path.is_file():
@@ -167,6 +178,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument("--url", required=True, help="Contact Form 7 feedback endpoint URL")
     parser.add_argument("--file", help="File to upload on every request")
+    parser.add_argument("--file-size-mb", type=parse_mb, help="Auto-generate an upload file of this size in MB when --file is omitted")
     parser.add_argument("--generate-size", type=parse_size, default=parse_size("7mb"), help="Generated file size when --file is omitted")
     parser.add_argument("--max-file-size", type=parse_size, default=parse_size("25mb"), help="Safety ceiling for upload file size")
     parser.add_argument("--allow-large-file", action="store_true", help="Allow files larger than --max-file-size")
