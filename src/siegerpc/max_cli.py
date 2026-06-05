@@ -195,6 +195,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--message", default="Hello", help="Default your-message field")
     parser.add_argument("--field", action="append", type=parse_field, default=[], help="Extra or override form field as name=value")
     parser.add_argument("--duration", type=float, default=30, help="Test duration in seconds")
+    parser.add_argument("--forever", action="store_true", help="Run until Ctrl+C or --requests limit instead of stopping by duration")
     parser.add_argument("--requests", type=int, help="Stop after this many requests")
     parser.add_argument("--concurrency", type=int, default=1, help="Number of worker threads")
     parser.add_argument("--rate", type=float, default=1, help="Global request rate limit. Use 0 for unlimited")
@@ -220,6 +221,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         print("warning: URL does not look like a Contact Form 7 feedback endpoint", file=sys.stderr)
     if args.concurrency < 1 or args.concurrency > 100:
         parser.error("--concurrency must be between 1 and 100")
+    if args.forever:
+        args.duration = None
     if args.duration is not None and args.duration <= 0 and args.requests is None:
         parser.error("--duration must be positive unless --requests is set")
     if args.requests is not None and args.requests < 1:
@@ -256,7 +259,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"file field:          {form.file_field}")
     print(f"concurrency:         {args.concurrency}")
     print(f"rate limit:          {'unlimited' if args.rate == 0 else f'{args.rate:g} req/s'}")
-    print(f"duration:            {args.duration:g}s" if args.duration else "duration:            request-count limited")
+    print("duration:            until Ctrl+C" if args.forever else f"duration:            {args.duration:g}s" if args.duration else "duration:            request-count limited")
     if args.requests:
         print(f"request limit:       {args.requests}")
     print("press Ctrl+C to stop early", flush=True)

@@ -147,6 +147,19 @@ siegemax \
   --i-own-this-server
 ```
 
+Run continuously until Ctrl+C:
+
+```bash
+siegemax \
+  --url https://example.com/wp-json/contact-form-7/v1/contact-forms/50/feedback \
+  --file-size-mb 10 \
+  --form-id 50 \
+  --unit-tag wpcf7-f50-p30-o1 \
+  --rate 1 \
+  --forever \
+  --i-own-this-server
+```
+
 Increase pressure carefully:
 
 ```bash
