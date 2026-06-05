@@ -192,3 +192,26 @@ siegemax \
 
 For defensive testing, watch your web server CPU, PHP-FPM workers, database load,
 WAF logs, and WordPress access logs while running this tool.
+
+## Server Hardening
+
+The repo includes a defensive helper script for WordPress servers:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/scripts/harden-wordpress-forms.sh \
+  | sudo bash -s -- --wp-root /var/www/html --max-upload-mb 8 --max-requests 10 --window-seconds 60
+```
+
+For Nginx, pass the site file so the script can add edge-level rules before PHP:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/scripts/harden-wordpress-forms.sh \
+  | sudo bash -s -- --wp-root /var/www/html --nginx-site /etc/nginx/sites-available/default --max-upload-mb 8 --max-requests 10 --window-seconds 60
+```
+
+What it installs:
+
+- a WordPress MU-plugin that blocks `xmlrpc.php`
+- per-IP rate limiting for Contact Form 7 feedback REST requests
+- upload body size checks for Contact Form 7 feedback requests
+- optional Nginx rules to block/rate-limit before PHP sees the request
