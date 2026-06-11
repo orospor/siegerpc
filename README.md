@@ -1,38 +1,34 @@
 # siegerpc
 
-Authorized WordPress load testing tools for servers you own or have explicit
-permission to test.
+Orospor Labs WordPress resilience tester for authorized XML-RPC and Contact
+Form 7 capacity checks.
 
-`siegerpc` sends XML-RPC POST requests and reports throughput, status codes,
-latency percentiles, errors, and bytes received. By default it uses the harmless
-`system.listMethods` XML-RPC method, which exercises the XML-RPC endpoint
-without requiring credentials or changing WordPress state.
+The project ships two command-line tools:
 
-`siegemax` sends Contact Form 7 multipart upload requests with a configurable
-file payload and form fields. It is useful for checking upload limits, WAF rules,
-PHP worker saturation, and origin behavior under authorized multipart pressure.
+- `siegerpc`: sends XML-RPC POST requests and reports throughput, status codes,
+  latency percentiles, errors, and bytes received.
+- `siegemax`: sends Contact Form 7 multipart upload requests with configurable
+  files and form fields.
 
-## Safety model
+Both tools are designed for defensive validation on systems you own or have
+explicit permission to test.
 
-This tool is for your own infrastructure only. It requires the
-`--i-own-this-server` confirmation flag before it will send traffic.
+## Responsible use
 
-Defaults are intentionally modest:
+These tools can create real load. Use them only in approved test windows and
+only against infrastructure in scope.
 
-- 10 concurrent workers
-- 30 second duration
-- 50 requests per second maximum
-- 30 second request timeout
+The commands require the confirmation flag:
 
-`siegemax` defaults are stricter because upload requests are heavier:
+```bash
+--i-own-this-server
+```
 
-- 1 concurrent worker
-- 30 second duration
-- 1 request per second maximum
-- 7 MB generated upload file when `--file` and `--file-size-mb` are omitted
-- 25 MB upload safety ceiling unless `--allow-large-file` is supplied
+Defaults are intentionally conservative. Increase concurrency, rate, duration,
+or upload size only after watching server health and confirming the environment
+can absorb the test.
 
-## Quick start
+## Install
 
 Install from GitHub:
 
@@ -40,48 +36,42 @@ Install from GitHub:
 curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/install.sh | bash
 ```
 
-Global system install on Debian/Ubuntu:
+System install on Debian or Ubuntu:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/install.sh | sudo bash -s -- --system
 ```
 
-If your Python environment needs a user-level install:
+User-level install:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/install.sh | bash -s -- --user
 ```
 
+Run from a local clone:
+
+```bash
+git clone https://github.com/orospor/siegerpc.git
+cd siegerpc
+python3 -m pip install -e .
+```
+
+## `siegerpc`: XML-RPC tester
+
+By default, `siegerpc` uses the harmless XML-RPC method
+`system.listMethods`. This exercises the endpoint without credentials and
+without changing WordPress state.
+
+Basic check:
+
 ```bash
 siegerpc --url https://example.com/xmlrpc.php --i-own-this-server
 ```
 
-Contact Form 7 upload test:
+One-minute test:
 
 ```bash
-siegemax \
-  --url https://example.com/wp-json/contact-form-7/v1/contact-forms/50/feedback \
-  --file-size-mb 7 \
-  --form-id 50 \
-  --unit-tag wpcf7-f50-p30-o1 \
-  --i-own-this-server
-```
-
-Run from this project directory:
-
-```bash
-cd /Users/gurujee/Documents/Playground/siegerpc
-python3 -m siegerpc --url https://example.com/xmlrpc.php --i-own-this-server
-```
-
-## Examples
-
-### siegerpc
-
-Moderate test for one minute:
-
-```bash
-python3 -m siegerpc \
+siegerpc \
   --url https://example.com/xmlrpc.php \
   --duration 60 \
   --concurrency 25 \
@@ -89,10 +79,10 @@ python3 -m siegerpc \
   --i-own-this-server
 ```
 
-Fixed request count instead of duration:
+Fixed request count:
 
 ```bash
-python3 -m siegerpc \
+siegerpc \
   --url https://example.com/xmlrpc.php \
   --requests 1000 \
   --concurrency 20 \
@@ -100,54 +90,55 @@ python3 -m siegerpc \
   --i-own-this-server
 ```
 
-Use a custom XML-RPC method:
+Custom XML-RPC method:
 
 ```bash
-python3 -m siegerpc \
+siegerpc \
   --url https://example.com/xmlrpc.php \
   --method demo.sayHello \
   --i-own-this-server
 ```
 
-Save CSV results:
+Save per-request CSV:
 
 ```bash
-python3 -m siegerpc \
+siegerpc \
   --url https://example.com/xmlrpc.php \
   --csv results.csv \
   --i-own-this-server
 ```
 
-### siegemax
+## `siegemax`: Contact Form 7 upload tester
 
-Upload an existing 7 MB file to Contact Form 7:
+`siegemax` sends multipart Contact Form 7 feedback requests. It is useful for
+checking upload limits, CDN/WAF handling, PHP worker saturation, and origin
+behavior under authorized multipart pressure.
+
+Basic generated upload:
+
+```bash
+siegemax \
+  --url https://example.com/wp-json/contact-form-7/v1/contact-forms/50/feedback \
+  --form-id 50 \
+  --unit-tag wpcf7-f50-p30-o1 \
+  --file-size-mb 7 \
+  --i-own-this-server
+```
+
+Upload an existing file:
 
 ```bash
 siegemax \
   --url https://example.com/wp-json/contact-form-7/v1/contact-forms/50/feedback \
   --file /tmp/test7mb.txt \
   --form-id 50 \
-  --cf7-version 6.1.6 \
   --unit-tag wpcf7-f50-p30-o1 \
   --duration 60 \
   --rate 1 \
   --i-own-this-server
 ```
 
-Auto-generate a 10 MB file instead of providing one:
-
-```bash
-siegemax \
-  --url https://example.com/wp-json/contact-form-7/v1/contact-forms/50/feedback \
-  --file-size-mb 10 \
-  --form-id 50 \
-  --unit-tag wpcf7-f50-p30-o1 \
-  --duration 60 \
-  --rate 1 \
-  --i-own-this-server
-```
-
-Run continuously until Ctrl+C:
+Run until interrupted:
 
 ```bash
 siegemax \
@@ -160,7 +151,7 @@ siegemax \
   --i-own-this-server
 ```
 
-Increase pressure carefully:
+Carefully increase pressure:
 
 ```bash
 siegemax \
@@ -183,35 +174,75 @@ siegemax \
   --i-own-this-server
 ```
 
-## Interpreting output
+## Default safety limits
 
-- `availability`: percentage of responses with HTTP status below 500
+`siegerpc` defaults:
+
+- 10 concurrent workers
+- 30 second duration
+- 50 requests per second maximum
+- 30 second request timeout
+
+`siegemax` defaults:
+
+- 1 concurrent worker
+- 30 second duration
+- 1 request per second maximum
+- 7 MB generated upload file when no file is supplied
+- 25 MB upload safety ceiling unless `--allow-large-file` is supplied
+
+## Reading output
+
+The summary includes:
+
+- `availability`: responses with HTTP status below 500
 - `status`: count of HTTP status codes returned by the endpoint
-- `latency`: request duration percentiles in milliseconds
-- `errors`: connection, timeout, TLS, and other client-side failures
+- `latency`: min, mean, p50, p95, p99, and max request duration
+- `errors`: connection, timeout, TLS, and client-side failures
+- `bytes read`: total response bytes received
 
-For defensive testing, watch your web server CPU, PHP-FPM workers, database load,
-WAF logs, and WordPress access logs while running this tool.
+During a defensive test, watch:
 
-## Server Hardening
+- Web server CPU and memory
+- PHP-FPM or LiteSpeed worker occupancy
+- CDN cache and WAF logs
+- WordPress access and error logs
+- Database load and slow queries
 
-The repo includes a defensive helper script for WordPress servers:
+## WordPress hardening helper
+
+The repository includes a defensive helper script:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/scripts/harden-wordpress-forms.sh \
   | sudo bash -s -- --wp-root /var/www/html --max-upload-mb 8 --max-requests 10 --window-seconds 60
 ```
 
-For Nginx, pass the site file so the script can add edge-level rules before PHP:
+For Nginx, pass the site config so rules can be added before PHP sees the
+request:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/orospor/siegerpc/main/scripts/harden-wordpress-forms.sh \
   | sudo bash -s -- --wp-root /var/www/html --nginx-site /etc/nginx/sites-available/default --max-upload-mb 8 --max-requests 10 --window-seconds 60
 ```
 
-What it installs:
+The helper can install:
 
-- a WordPress MU-plugin that blocks `xmlrpc.php`
-- per-IP rate limiting for Contact Form 7 feedback REST requests
-- upload body size checks for Contact Form 7 feedback requests
-- optional Nginx rules to block/rate-limit before PHP sees the request
+- A WordPress MU-plugin that blocks `xmlrpc.php`
+- Per-IP rate limiting for Contact Form 7 feedback REST requests
+- Upload body size checks for Contact Form 7 feedback requests
+- Optional Nginx rules to block or rate-limit before PHP
+
+## Defensive questions to answer
+
+- Is XML-RPC still exposed?
+- Are XML-RPC calls rate-limited before PHP work begins?
+- Are Contact Form 7 upload limits enforced consistently?
+- Does the CDN/WAF block abusive POST patterns at the edge?
+- How quickly do users see 5xx responses when workers saturate?
+- Which mitigation gives the best protection with the least user friction?
+
+## License
+
+Use this project responsibly under the license terms published in this
+repository.
