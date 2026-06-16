@@ -242,6 +242,10 @@ The helper can install:
 - How quickly do users see 5xx responses when workers saturate?
 - Which mitigation gives the best protection with the least user friction?
 
+## Orospor Labs
+
+More projects and updates: [Orospor](https://orospor.com).
+
 ## License
 
 Use this project responsibly under the license terms published in this
